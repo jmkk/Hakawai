@@ -81,15 +81,16 @@ typedef NS_ENUM(NSInteger, HKWMentionsStartDetectionState) {
         case HKWMentionsStartDetectionStateQuiescentReady: {
             // STATE: User is not creating mention, but can begin one
             if (self.implicitMentionsEnabled) {
+                id<HKWMentionsStartDetectionStateMachineProtocol> __strong delegate = self.delegate;
                 [self.stringBuffer appendString:string];
                 self.charactersSinceLastWhitespace += [string length];
-                if (self.charactersSinceLastWhitespace >= [self.delegate implicitSearchLength]) {
+                if (self.charactersSinceLastWhitespace >= [delegate implicitSearchLength]) {
                     // The user has fired off enough characters to start a mention.
                     self.state = HKWMentionsStartDetectionStateCreatingMention;
-                    [self.delegate beginMentionsCreationWithString:[self.stringBuffer copy]
-                                                        atLocation:location
-                                             usingControlCharacter:usingControlCharacter
-                                                  controlCharacter:character];
+                    [delegate beginMentionsCreationWithString:[self.stringBuffer copy]
+                                                   atLocation:location
+                                        usingControlCharacter:usingControlCharacter
+                                             controlCharacter:character];
                 }
             }
             break;
@@ -107,6 +108,7 @@ typedef NS_ENUM(NSInteger, HKWMentionsStartDetectionState) {
 }
 
 - (void)characterTyped:(unichar)c asInsertedCharacter:(BOOL)inserted previousCharacter:(unichar)previousCharacter {
+    id<HKWMentionsStartDetectionStateMachineProtocol> __strong delegate = self.delegate;
     NSCharacterSet *whitespaceSet = [NSCharacterSet whitespaceAndNewlineCharacterSet];
     // Determine the type of the character
     enum CharacterType {
@@ -120,7 +122,7 @@ typedef NS_ENUM(NSInteger, HKWMentionsStartDetectionState) {
     }
     else {
         // Get the control character set and see if the typed character is a control character
-        NSCharacterSet *controlCharacterSet = [self.delegate controlCharacterSet];
+        NSCharacterSet *controlCharacterSet = [delegate controlCharacterSet];
         if (controlCharacterSet && [controlCharacterSet characterIsMember:c]) {
             currentCharacterType = CharacterTypeControlCharacter;
         }
@@ -130,7 +132,7 @@ typedef NS_ENUM(NSInteger, HKWMentionsStartDetectionState) {
         previousCharacterType = CharacterTypeWhitespace;
     } else {
         // Get the control character set and see if the typed character is a control character
-        NSCharacterSet *controlCharacterSet = [self.delegate controlCharacterSet];
+        NSCharacterSet *controlCharacterSet = [delegate controlCharacterSet];
         if (controlCharacterSet && [controlCharacterSet characterIsMember:previousCharacter]) {
             previousCharacterType = CharacterTypeControlCharacter;
         }
@@ -146,13 +148,13 @@ typedef NS_ENUM(NSInteger, HKWMentionsStartDetectionState) {
                     self.charactersSinceLastWhitespace++;
                     unichar stackC = c;
                     [self.stringBuffer appendString:[NSString stringWithCharacters:&stackC length:1]];
-                    if (self.charactersSinceLastWhitespace >= [self.delegate implicitSearchLength]) {
+                    if (self.charactersSinceLastWhitespace >= [delegate implicitSearchLength]) {
                         // The user has fired off enough characters to start a mention.
                         self.state = HKWMentionsStartDetectionStateCreatingMention;
-                        [self.delegate beginMentionsCreationWithString:[self.stringBuffer copy]
-                                                       alreadyInserted:inserted
-                                                 usingControlCharacter:NO
-                                                      controlCharacter:0];
+                        [delegate beginMentionsCreationWithString:[self.stringBuffer copy]
+                                                alreadyInserted:inserted
+                                            usingControlCharacter:NO
+                                                controlCharacter:0];
                     }
                 }
             }
@@ -161,10 +163,10 @@ typedef NS_ENUM(NSInteger, HKWMentionsStartDetectionState) {
                 if (self.charactersSinceLastWhitespace == 0) {
                     // Start an EXPLICIT MENTION
                     self.state = HKWMentionsStartDetectionStateCreatingMention;
-                    [self.delegate beginMentionsCreationWithString:[self.stringBuffer copy]
-                                                   alreadyInserted:inserted
-                                             usingControlCharacter:YES
-                                                  controlCharacter:c];
+                    [delegate beginMentionsCreationWithString:[self.stringBuffer copy]
+                                              alreadyInserted:inserted
+                                        usingControlCharacter:YES
+                                            controlCharacter:c];
                 }
             }
             else if (currentCharacterType == CharacterTypeWhitespace) {

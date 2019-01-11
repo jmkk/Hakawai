@@ -80,8 +80,9 @@
         self.selectedRange = originalSelectedRange;
     }
     self.transformInProgress = NO;
-    if ([self.externalDelegate respondsToSelector:@selector(textView:didChangeAttributedTextTo:originalText:originalRange:)]) {
-        [self.externalDelegate textView:self didChangeAttributedTextTo:infixString originalText:originalInfix originalRange:range];
+    id<HKWTextViewDelegate> __strong externalDelegate = self.externalDelegate;
+    if ([externalDelegate respondsToSelector:@selector(textView:didChangeAttributedTextTo:originalText:originalRange:)]) {
+        [externalDelegate textView:self didChangeAttributedTextTo:infixString originalText:originalInfix originalRange:range];
     }
     if (usingAbstraction) {
         [self.abstractionLayer popIgnore];
@@ -95,7 +96,7 @@
 
 - (void)insertAttributedText:(NSAttributedString *)text location:(NSUInteger)location {
     if ([text length] == 0) return;
-    NSAttributedString *(^transformer)(NSAttributedString *) = ^(NSAttributedString *input) {
+    NSAttributedString *(^transformer)(NSAttributedString *) = ^(NSAttributedString *__unused input) {
         return text;
     };
     [self transformTextAtRange:NSMakeRange(location, 0) withTransformer:transformer];
@@ -126,8 +127,9 @@
         location = [self.attributedText length] - 1;
     }
     [self insertAttributedText:[NSAttributedString attributedStringWithAttachment:attachment] location:location];
-    if ([self.externalDelegate respondsToSelector:@selector(textView:didReceiveNewTextAttachment:)]) {
-        [self.externalDelegate textView:self didReceiveNewTextAttachment:attachment];
+    id<HKWTextViewDelegate> __strong externalDelegate = self.externalDelegate;
+    if ([externalDelegate respondsToSelector:@selector(textView:didReceiveNewTextAttachment:)]) {
+        [externalDelegate textView:self didReceiveNewTextAttachment:attachment];
     }
     if (usingAbstraction) {
         [self.abstractionLayer popIgnore];
@@ -141,7 +143,7 @@
         || range.length == 0) {
         return;
     }
-    NSAttributedString *(^transformer)(NSAttributedString *) = ^(NSAttributedString *input) {
+    NSAttributedString *(^transformer)(NSAttributedString *) = ^(NSAttributedString *__unused input) {
         return (NSAttributedString *)nil;
     };
     [self transformTextAtRange:range withTransformer:transformer];

@@ -148,6 +148,7 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
 - (void)characterTyped:(unichar)c {
     BOOL isNewline = [[NSCharacterSet newlineCharacterSet] characterIsMember:c];
     BOOL isWhitespace = [[NSCharacterSet whitespaceCharacterSet] characterIsMember:c];
+    id<HKWMentionsCreationStateMachineProtocol> __strong delegate = self.delegate;
 
     // Preprocessing if the user types a whitespace character
     switch (self.resultsState) {
@@ -159,13 +160,13 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
             // If the user types a whitespace when there are no results, cancel mentions creation
             if (isWhitespace) {
                 self.state = HKWMentionsCreationStateQuiescent;
-                [self.delegate cancelMentionFromStartingLocation:self.startingLocation];
+                [delegate cancelMentionFromStartingLocation:self.startingLocation];
                 return;
             }
     }
     if ([self.stringBuffer length] == 0 && isWhitespace) {
         self.state = HKWMentionsCreationStateQuiescent;
-        [self.delegate cancelMentionFromStartingLocation:self.startingLocation];
+        [delegate cancelMentionFromStartingLocation:self.startingLocation];
         return;
     }
     unichar stackC = c;
@@ -179,6 +180,7 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
 
 - (void)stringInserted:(NSString *)string isWhitespace:(BOOL)isWhitespace isNewline:(BOOL)isNewline {
     NSAssert([string length] > 0, @"String must be nonzero length.");
+    id<HKWMentionsCreationStateMachineProtocol> __strong delegate = self.delegate;
 
     // State transition
     switch (self.networkState) {
@@ -190,7 +192,7 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
             if (isNewline) {
                 // User ended mention creation by typing a newline
                 self.state = HKWMentionsCreationStateQuiescent;
-                [self.delegate cancelMentionFromStartingLocation:self.startingLocation];
+                [delegate cancelMentionFromStartingLocation:self.startingLocation];
             }
             else {
                 [self.stringBuffer appendString:string];
@@ -201,10 +203,10 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
 
                 // Start the cooldown timer and fire off a request
                 [self activateCooldownTimer];
-                [self.delegate asyncRetrieveEntitiesForKeyString:[self.stringBuffer copy]
-                                                      searchType:self.searchType
-                                                controlCharacter:self.explicitSearchControlCharacter
-                                                      completion:^(NSArray *results, BOOL dedupe, BOOL isComplete) {
+                [delegate asyncRetrieveEntitiesForKeyString:[self.stringBuffer copy]
+                                                 searchType:self.searchType
+                                           controlCharacter:self.explicitSearchControlCharacter
+                                                 completion:^(NSArray *results, BOOL dedupe, BOOL isComplete) {
                                                           [__self dataReturnedWithResults:results
                                                                            sequenceNumber:sequenceNumber
                                                                             triggerAction:(isWhitespace
@@ -225,7 +227,7 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
             if (isNewline) {
                 // User ended mention creation by typing a newline
                 self.state = HKWMentionsCreationStateQuiescent;
-                [self.delegate cancelMentionFromStartingLocation:self.startingLocation];
+                [delegate cancelMentionFromStartingLocation:self.startingLocation];
             }
             else {
                 [self.stringBuffer appendString:string];
@@ -266,6 +268,7 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
         deleteStringIsTransient = ![trimmedStringBuffer isEqualToString:deleteString];
     }
 
+    id<HKWMentionsCreationStateMachineProtocol> __strong delegate = self.delegate;
     // Switch on the overall state
     switch (self.state) {
         case HKWMentionsCreationStateQuiescent:
@@ -284,7 +287,7 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
             else if (bufferAlreadyEmpty) {
                 // User ended mentions creation by deleting enough characters to completely remove the mention
                 self.state = HKWMentionsCreationStateQuiescent;
-                [self.delegate cancelMentionFromStartingLocation:self.startingLocation];
+                [delegate cancelMentionFromStartingLocation:self.startingLocation];
                 return;
             }
             break;
@@ -319,10 +322,10 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
 
             // Start the cooldown timer and fire off a request
             [self activateCooldownTimer];
-            [self.delegate asyncRetrieveEntitiesForKeyString:[self.stringBuffer copy]
-                                                  searchType:self.searchType
-                                            controlCharacter:self.explicitSearchControlCharacter
-                                                  completion:^(NSArray *results, BOOL dedupe, BOOL isComplete) {
+            [delegate asyncRetrieveEntitiesForKeyString:[self.stringBuffer copy]
+                                             searchType:self.searchType
+                                       controlCharacter:self.explicitSearchControlCharacter
+                                             completion:^(NSArray *results, BOOL dedupe, BOOL isComplete) {
                                                       [__self dataReturnedWithResults:results
                                                                        sequenceNumber:sequenceNumber
                                                                         triggerAction:HKWMentionsCreationActionCharacterDeleted
@@ -468,8 +471,9 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
 }
 
 - (CGRect)frameForMode:(HKWMentionsChooserPositionMode)mode {
-    CGRect chooserFrame = [self.delegate boundsForParentEditorView];
-    CGFloat viewportHeight = [self.delegate heightForSingleLineViewport];
+    id<HKWMentionsCreationStateMachineProtocol> __strong delegate = self.delegate;
+    CGRect chooserFrame = [delegate boundsForParentEditorView];
+    CGFloat viewportHeight = [delegate heightForSingleLineViewport];
 
     if (mode == HKWMentionsChooserPositionModeEnclosedTop) {
         chooserFrame.size.height -= viewportHeight;
@@ -499,7 +503,8 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
 #pragma mark - Private (chooser view related)
 
 - (void)showChooserView {
-    [self.delegate accessoryViewStateWillChange:YES];
+    id<HKWMentionsCreationStateMachineProtocol> __strong delegate = self.delegate;
+    [delegate accessoryViewStateWillChange:YES];
 
     self.chooserState = HKWMentionsCreationChooserStateVisible;
     [self.entityChooserView becomeVisible];
@@ -509,26 +514,27 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
     HKWAccessoryViewMode mode = (self.chooserViewInsideTextView
                                  ? HKWAccessoryViewModeSibling
                                  : HKWAccessoryViewModeFreeFloating);
-    [self.delegate attachViewToParentEditor:self.entityChooserView
+    [delegate attachViewToParentEditor:self.entityChooserView
                                      origin:self.entityChooserView.frame.origin
                                        mode:mode];
-    [self.delegate accessoryViewActivated:YES];
+    [delegate accessoryViewActivated:YES];
 
     // Force entityChooserView to be laid out before calculating the right cursor position.
     [self.entityChooserView layoutIfNeeded];
 
     // Move the chooser cursor to the right position
-    CGFloat newPosition = [self.delegate positionForChooserCursorRelativeToView:self.entityChooserView
-                                                                     atLocation:self.startingLocation];
+    CGFloat newPosition = [delegate positionForChooserCursorRelativeToView:self.entityChooserView
+                                                                atLocation:self.startingLocation];
     if ([self.entityChooserView respondsToSelector:@selector(moveInsertionPointMarkerToXPosition:)]) {
         [self.entityChooserView moveInsertionPointMarkerToXPosition:newPosition];
     }
 }
 
 - (void)hideChooserView {
-    [self.delegate accessoryViewStateWillChange:NO];
+    id<HKWMentionsCreationStateMachineProtocol> __strong delegate = self.delegate;
+    [delegate accessoryViewStateWillChange:NO];
     [self.entityChooserView resetScrollPositionAndHide];
-    [self.delegate accessoryViewActivated:NO];
+    [delegate accessoryViewActivated:NO];
 }
 
 - (UIView<HKWChooserViewProtocol> *)createNewChooserView {
@@ -612,7 +618,7 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
  method may fire another typeahead request to the server immediately. Otherwise, the firing of the timer indicates that
  it is acceptable to send another request at any time.
  */
-- (void)cooldownTimerFired:(NSTimer *)timer {
+- (void)cooldownTimerFired:(NSTimer *)__unused timer {
     switch (self.networkState) {
         case HKWMentionsCreationNetworkStateQuiescent:
             // User not creating a mention right now.
@@ -808,19 +814,20 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
     // 1. The user's initial query turned up no results and we should not continue searching after empty results
     // 2. There are no results because the last character the user typed was a whitespace or newline (whether or not
     //    the previous request resulted ifn results or not)
-    BOOL noResultsAndShouldStop = (!self.delegate.shouldContinueSearchingAfterEmptyResults
+    id<HKWMentionsCreationStateMachineProtocol> __strong delegate = self.delegate;
+    BOOL noResultsAndShouldStop = (!delegate.shouldContinueSearchingAfterEmptyResults
                                    && self.resultsState == HKWMentionsCreationResultsStateAwaitingFirstResult);
     BOOL shouldStop = (noResultsAndShouldStop
                        || previousAction == HKWMentionsCreationActionWhitespaceCharacterInserted);
     if (shouldStop) {
-        [self.delegate cancelMentionFromStartingLocation:self.startingLocation];
+        [delegate cancelMentionFromStartingLocation:self.startingLocation];
         self.state = HKWMentionsCreationStateQuiescent;
         return;
     }
 
     // Advance the results state. The user could have been in one of two states formally: results existed, or there were
     //  no results but the user hadn't typed a whitespace character since results stopped coming back, or if the search results are for initial state
-    NSAssert((self.delegate.shouldContinueSearchingAfterEmptyResults && self.resultsState == HKWMentionsCreationResultsStateAwaitingFirstResult)
+    NSAssert((delegate.shouldContinueSearchingAfterEmptyResults && self.resultsState == HKWMentionsCreationResultsStateAwaitingFirstResult)
              || self.resultsState == HKWMentionsCreationResultsStateCreatingMentionWithResults
              || self.resultsState == HKWMentionsCreationResultsStateNoResultsWithoutWhitespace
              || self.searchType == HKWMentionsSearchTypeInitial,
@@ -862,25 +869,26 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
     NSAssert(indexPath.section == 0 || indexPath.section == 1,
              @"Entity chooser table view can only have up to 2 sections. Method was called for section %ld.",
              (long)indexPath.section);
+    id<HKWMentionsCreationStateMachineProtocol> __strong delegate = self.delegate;
     if (indexPath.section == 1) {
         // Loading cell
-        NSAssert(self.delegate.loadingCellSupported,
+        NSAssert(delegate.loadingCellSupported,
                  @"Table view has 2 sections but the delegate doesn't support a loading cell. This is an error.");
-        UITableViewCell *cell = [self.delegate loadingCellForTableView:tableView];
+        UITableViewCell *cell = [delegate loadingCellForTableView:tableView];
         cell.userInteractionEnabled = NO;
         return cell;
     }
     NSAssert(indexPath.row >= 0 && indexPath.row < [self.entityArray count],
              @"Entity chooser table view requested a cell with an out-of-bounds index path row.");
     id<HKWMentionsEntityProtocol> entity = self.entityArray[indexPath.row];
-    return [self.delegate cellForMentionsEntity:entity withMatchString:[self.stringBuffer copy] tableView:tableView atIndexPath:indexPath];
+    return [delegate cellForMentionsEntity:entity withMatchString:[self.stringBuffer copy] tableView:tableView atIndexPath:indexPath];
 }
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)__unused tableView {
     return (self.delegate.loadingCellSupported && !self.currentQueryIsComplete) ? 2 : 1;
 }
 
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+- (NSInteger)tableView:(UITableView *)__unused tableView numberOfRowsInSection:(NSInteger)section {
     NSAssert(section == 0 || section == 1,
              @"Entity chooser table view can only have up to 2 sections.");
     if (section == 1) {
@@ -893,14 +901,15 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
     NSAssert(indexPath.section == 0 || indexPath.section == 1,
              @"Entity chooser table view can only have up to 2 sections.");
+    id<HKWMentionsCreationStateMachineProtocol> __strong delegate = self.delegate;
     if (indexPath.section == 1) {
         // Loading cell
-        return [self.delegate heightForLoadingCellInTableView:tableView];
+        return [delegate heightForLoadingCellInTableView:tableView];
     }
     NSAssert(indexPath.row >= 0 && indexPath.row < [self.entityArray count],
              @"Entity chooser table view requested a cell with an out-of-bounds index path row.");
     id<HKWMentionsEntityProtocol> entity = self.entityArray[indexPath.row];
-    return [self.delegate heightForCellForMentionsEntity:entity tableView:tableView];
+    return [delegate heightForCellForMentionsEntity:entity tableView:tableView];
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -914,8 +923,9 @@ typedef NS_ENUM(NSInteger, HKWMentionsCreationAction) {
                                                                  identifier:[entity entityId]];
     mention.metadata = [entity entityMetadata];
     self.state = HKWMentionsCreationStateQuiescent;
-    [self.delegate createMention:mention startingLocation:self.startingLocation];
-    [self.delegate selected:entity atIndexPath:indexPath];
+    id<HKWMentionsCreationStateMachineProtocol> __strong delegate = self.delegate;
+    [delegate createMention:mention startingLocation:self.startingLocation];
+    [delegate selected:entity atIndexPath:indexPath];
 }
 
 

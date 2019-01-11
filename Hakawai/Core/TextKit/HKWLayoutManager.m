@@ -102,7 +102,7 @@ typedef NSMutableArray RectValuesBuffer;
     // Go through the attributes in the given range and pick out the ones that correspond to the
     [textStorage enumerateAttributesInRange:adjustedRange
                                     options:NSAttributedStringEnumerationLongestEffectiveRangeNotRequired
-                                 usingBlock:^(NSDictionary *attrs, NSRange range, BOOL *stop) {
+                                 usingBlock:^(NSDictionary *attrs, NSRange range, BOOL *__unused stop) {
                                      for (NSString *attr in attrs) {
                                          if (attr == HKWRoundedRectBackgroundAttributeName) {
                                              RoundedRectAttributeTuple *tuple = @[[NSValue valueWithRange:range],
@@ -142,11 +142,11 @@ typedef NSMutableArray RectValuesBuffer;
 
         // Get the line fragment rects for the given RRB attribute
         [self enumerateLineFragmentsForGlyphRange:currentRange
-                                       usingBlock:^(CGRect rect,
+                                       usingBlock:^(CGRect __unused rect,
                                                     CGRect usedRect,
                                                     NSTextContainer *textContainer,
                                                     NSRange glyphRange,
-                                                    BOOL *stop) {
+                                                    BOOL *__unused stop) {
                                            if (container != textContainer) {
                                                return;
                                            }
@@ -171,7 +171,7 @@ typedef NSMutableArray RectValuesBuffer;
         [self enumerateEnclosingRectsForGlyphRange:currentRange
                           withinSelectedGlyphRange:NSMakeRange(NSNotFound, 0)
                                    inTextContainer:container
-                                        usingBlock:^(CGRect rect, BOOL *stop) {
+                                        usingBlock:^(CGRect rect, BOOL *__unused stop) {
                                             [enclosingRects addObject:[NSValue valueWithCGRect:rect]];
                                         }];
 
@@ -189,7 +189,7 @@ typedef NSMutableArray RectValuesBuffer;
 
 - (NSArray *)arrayOfRectsForFragmentRects:(NSArray *)fragmentRects
                            enclosingRects:(NSArray *)enclosingRects
-                         rrbAttributeData:(HKWRoundedRectBackgroundAttributeValue *)data {
+                         rrbAttributeData:(HKWRoundedRectBackgroundAttributeValue *__unused )data {
     RectValuesBuffer *buffer = [NSMutableArray array];
     if ([fragmentRects count] == 0) {
         return nil;

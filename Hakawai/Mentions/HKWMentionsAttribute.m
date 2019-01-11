@@ -65,7 +65,7 @@
 
 #pragma mark - Private
 
-- (id)copyWithZone:(NSZone *)zone {
+- (id)copyWithZone:(NSZone *)__unused zone {
     HKWMentionsAttribute *newAttr = [[self class] mentionWithText:self.mentionText
                                                                 identifier:self.entityIdentifier];
     newAttr.range = self.range;

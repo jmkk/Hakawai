@@ -29,7 +29,7 @@
 
 #pragma mark - Lifecycle
 
-- (instancetype _Nonnull)initWithFrame:(CGRect)frame textContainer:(nullable NSTextContainer *)textContainer {
+- (instancetype _Nonnull)initWithFrame:(CGRect)frame textContainer:(nullable NSTextContainer *)__unused textContainer {
     HKWLayoutManager *manager = [HKWLayoutManager new];
     NSTextContainer *container = [[NSTextContainer alloc] initWithSize:CGSizeMake(frame.size.width, FLT_MAX)];
     container.widthTracksTextView = YES;
@@ -62,7 +62,7 @@
 }
 
 // Build custom text container if the consumer is using a XIB.
-- (id)awakeAfterUsingCoder:(NSCoder *)aDecoder {
+- (id)awakeAfterUsingCoder:(NSCoder *)__unused aDecoder {
     HKWLayoutManager *manager = [HKWLayoutManager new];
 
     NSTextContainer *container = [[NSTextContainer alloc] initWithSize:self.textContainer.size];
@@ -141,8 +141,9 @@
 
 - (void)paste:(id)sender {
     [super paste:sender];
-    if ([self.externalDelegate respondsToSelector:@selector(textViewDidHaveTextPastedIn:)]) {
-        [self.externalDelegate textViewDidHaveTextPastedIn:self];
+    id<HKWTextViewDelegate> __strong externalDelegate = self.externalDelegate;
+    if ([externalDelegate respondsToSelector:@selector(textViewDidHaveTextPastedIn:)]) {
+        [externalDelegate textViewDidHaveTextPastedIn:self];
     }
 }
 
@@ -225,8 +226,9 @@
         [self.abstractionControlFlowPlugin singleLineViewportTapped];
     }
     // Next, inform the delegate
-    if ([self.externalDelegate respondsToSelector:@selector(textViewWasTappedInSingleLineViewportMode:)]) {
-        [self.externalDelegate textViewWasTappedInSingleLineViewportMode:self];
+    id<HKWTextViewDelegate> __strong externalDelegate = self.externalDelegate;
+    if ([externalDelegate respondsToSelector:@selector(textViewWasTappedInSingleLineViewportMode:)]) {
+        [externalDelegate textViewWasTappedInSingleLineViewportMode:self];
     }
 
     // Move the cursor to tapped location
@@ -254,6 +256,7 @@
 #pragma mark - UITextViewDelegate
 
 - (BOOL)textViewShouldBeginEditing:(UITextView *)textView {
+    id<HKWTextViewDelegate> __strong externalDelegate = self.externalDelegate;
     BOOL shouldBeginEditing = YES;
     if (self.firstResponderIsCycling) {
         shouldBeginEditing = YES;
@@ -265,13 +268,13 @@
         shouldBeginEditing = [self.abstractionControlFlowPlugin textViewShouldBeginEditing:textView];
     }
     // Forward to external delegate
-    else if ([self.externalDelegate respondsToSelector:@selector(textViewShouldBeginEditing:)]) {
-        shouldBeginEditing = [self.externalDelegate textViewShouldBeginEditing:textView];
+    else if ([externalDelegate respondsToSelector:@selector(textViewShouldBeginEditing:)]) {
+        shouldBeginEditing = [externalDelegate textViewShouldBeginEditing:textView];
     }
 
     // Let external-delegate know about begin editing.
-    if ([self.externalDelegate respondsToSelector:@selector(textView:willBeginEditing:)]) {
-        [self.externalDelegate textView:self willBeginEditing:shouldBeginEditing];
+    if ([externalDelegate respondsToSelector:@selector(textView:willBeginEditing:)]) {
+        [externalDelegate textView:self willBeginEditing:shouldBeginEditing];
     }
     return shouldBeginEditing;
 }
@@ -287,12 +290,14 @@
         [self.abstractionControlFlowPlugin textViewDidBeginEditing:textView];
     }
     // Forward to external delegate
-    if ([self.externalDelegate respondsToSelector:@selector(textViewDidBeginEditing:)]) {
-        [self.externalDelegate textViewDidBeginEditing:textView];
+    id<HKWTextViewDelegate> __strong externalDelegate = self.externalDelegate;
+    if ([externalDelegate respondsToSelector:@selector(textViewDidBeginEditing:)]) {
+        [externalDelegate textViewDidBeginEditing:textView];
     }
 }
 
 - (BOOL)textViewShouldEndEditing:(UITextView *)textView {
+    id<HKWTextViewDelegate> __strong externalDelegate = self.externalDelegate;
     BOOL shouldEndEditing = YES;
     if (self.firstResponderIsCycling) {
         shouldEndEditing = YES;
@@ -304,14 +309,14 @@
         shouldEndEditing = [self.abstractionControlFlowPlugin textViewShouldEndEditing:textView];
     }
     // Forward to external delegate
-    else if ([self.externalDelegate respondsToSelector:@selector(textViewShouldEndEditing:)]) {
-        shouldEndEditing = [self.externalDelegate textViewShouldEndEditing:textView];
+    else if ([externalDelegate respondsToSelector:@selector(textViewShouldEndEditing:)]) {
+        shouldEndEditing = [externalDelegate textViewShouldEndEditing:textView];
     }
 
 
     // Let external-delegate know about end editing.
-    if ([self.externalDelegate respondsToSelector:@selector(textView:willEndEditing:)]) {
-        [self.externalDelegate textView:self willEndEditing:shouldEndEditing];
+    if ([externalDelegate respondsToSelector:@selector(textView:willEndEditing:)]) {
+        [externalDelegate textView:self willEndEditing:shouldEndEditing];
     }
     return shouldEndEditing;
 }
@@ -327,8 +332,9 @@
         [self.abstractionControlFlowPlugin textViewDidEndEditing:textView];
     }
     // Forward to external delegate
-    if ([self.externalDelegate respondsToSelector:@selector(textViewDidEndEditing:)]) {
-        [self.externalDelegate textViewDidEndEditing:textView];
+    id<HKWTextViewDelegate> __strong externalDelegate = self.externalDelegate;
+    if ([externalDelegate respondsToSelector:@selector(textViewDidEndEditing:)]) {
+        [externalDelegate textViewDidEndEditing:textView];
     }
 }
 
@@ -365,12 +371,13 @@
     // 1) There is no control flow plugin registered OR
     // 2) Control flow plugin doesn't implement this delegate method OR
     // 2) Control flow plugin has approved the replacement
+    id<HKWTextViewDelegate> __strong externalDelegate = self.externalDelegate;
     if ((!shouldUseCustomValue || customValue)
-        && [self.externalDelegate respondsToSelector:@selector(textView:shouldChangeTextInRange:replacementText:)]) {
+        && [externalDelegate respondsToSelector:@selector(textView:shouldChangeTextInRange:replacementText:)]) {
         shouldUseCustomValue = YES;
-        customValue = [self.externalDelegate textView:textView
-                              shouldChangeTextInRange:range
-                                      replacementText:replacementText];
+        customValue = [externalDelegate textView:textView
+                         shouldChangeTextInRange:range
+                                 replacementText:replacementText];
     }
 
     // Update the typing attributes dictionary to support custom attributes
@@ -398,8 +405,9 @@
         [self.controlFlowPlugin textViewDidChange:textView];
     }
     // Forward to external delegate
-    if ([self.externalDelegate respondsToSelector:@selector(textViewDidChange:)]) {
-        [self.externalDelegate textViewDidChange:textView];
+    id<HKWTextViewDelegate> __strong externalDelegate = self.externalDelegate;
+    if ([externalDelegate respondsToSelector:@selector(textViewDidChange:)]) {
+        [externalDelegate textViewDidChange:textView];
     }
 }
 
@@ -421,8 +429,9 @@
         }
     }
     // Forward to external delegate
-    if ([self.externalDelegate respondsToSelector:@selector(textViewDidChangeSelection:)]) {
-        [self.externalDelegate textViewDidChangeSelection:textView];
+    id<HKWTextViewDelegate> __strong externalDelegate = self.externalDelegate;
+    if ([externalDelegate respondsToSelector:@selector(textViewDidChangeSelection:)]) {
+        [externalDelegate textViewDidChangeSelection:textView];
     }
 
     // If applicable, and the text view is in single line viewport mode, adjust the visible portion so it matches the
@@ -478,10 +487,11 @@
     }
 
     // Forward to external delegate
-    if ([self.externalDelegate respondsToSelector:@selector(textView:shouldInteractWithTextAttachment:inRange:)]) {
-        return [self.externalDelegate textView:textView
-              shouldInteractWithTextAttachment:textAttachment
-                                       inRange:characterRange];
+    id<HKWTextViewDelegate> __strong externalDelegate = self.externalDelegate;
+    if ([externalDelegate respondsToSelector:@selector(textView:shouldInteractWithTextAttachment:inRange:)]) {
+        return [externalDelegate textView:textView
+         shouldInteractWithTextAttachment:textAttachment
+                                  inRange:characterRange];
     }
     return YES;
 }
@@ -497,8 +507,9 @@
         return [self.abstractionControlFlowPlugin textView:textView shouldInteractWithURL:URL inRange:characterRange];
     }
     // Forward to external delegate
-    if ([self.externalDelegate respondsToSelector:@selector(textView:shouldInteractWithURL:inRange:)]) {
-        return [self.externalDelegate textView:textView shouldInteractWithURL:URL inRange:characterRange];
+    id<HKWTextViewDelegate> __strong externalDelegate = self.externalDelegate;
+    if ([externalDelegate respondsToSelector:@selector(textView:shouldInteractWithURL:inRange:)]) {
+        return [externalDelegate textView:textView shouldInteractWithURL:URL inRange:characterRange];
     }
     return YES;
 }

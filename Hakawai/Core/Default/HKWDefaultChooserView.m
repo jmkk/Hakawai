@@ -117,7 +117,7 @@
     self.tableViewContainer.layer.mask = [self maskLayerForMode:self.borderMode];
 }
 
-- (void)initialSetupForFrame:(CGRect)frame {
+- (void)initialSetupForFrame:(CGRect)__unused frame {
     [self setupTableView];
 
     self.backgroundColor = [UIColor clearColor];
